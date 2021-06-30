@@ -15,7 +15,7 @@
 # 
 # Comenzamos estableciendo todas las librerías de Python que nos harán falta para la realización del ejercicio, ordenadas según su función.
 
-# In[1]:
+# In[48]:
 
 
 # Tratamiento de datos
@@ -53,6 +53,16 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn import tree
 from sklearn.naive_bayes import GaussianNB
 from sklearn import svm
+
+
+# Modelos
+# ========================================
+from sklearn.linear_model import LinearRegression
+
+
+# Métricas
+# ========================================
+from sklearn.metrics import mean_squared_error, r2_score
 
 
 # In[2]:
@@ -123,7 +133,7 @@ df.isna().sum().sort_values()
 df[df.duplicated()]
 
 
-# In[65]:
+# In[7]:
 
 
 df = df.drop(df.index[581])
@@ -133,7 +143,7 @@ df = df.drop(df.index[581])
 # 
 # Esto nos va a permitir hacer referencia a ellas más adelante de forma más cómoda.
 
-# In[7]:
+# In[8]:
 
 
 featuresNum = ['age', 'bmi', 'children']
@@ -147,7 +157,7 @@ label = 'charges'
 # 
 # En función su distribución, algunos modelos de machine learning podrán ajustarse mejor o no.
 
-# In[8]:
+# In[9]:
 
 
 fig, axes = plt.subplots()
@@ -162,7 +172,7 @@ fig.tight_layout()
 # 
 # Fuente: [stackoverflow](https://stackoverflow.com/questions/6620471/fitting-empirical-distribution-to-theoretical-ones-with-scipy-python?lq=1)
 
-# In[9]:
+# In[10]:
 
 
 titulo1 = u'Charges.\n Todas las distribuciones ajustadas'
@@ -314,7 +324,7 @@ ax.set_ylabel(ylabel)
 # 
 # Se puede comprobar que, a pesar de formar parte de variables completamente diferentes por definición, "age" y "bmi" comparten un rango de valores similar, no así la variable "children", la cual toma unos pocos valores.
 
-# In[10]:
+# In[11]:
 
 
 df[featuresNum].describe()
@@ -322,7 +332,7 @@ df[featuresNum].describe()
 
 # Al igual que con la variable respuesta, hacemos una representación gráfica de la distribución de nuestras variables independientes numéricas.
 
-# In[11]:
+# In[12]:
 
 
 fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(15, 5))
@@ -348,7 +358,7 @@ plt.subplots_adjust(top = 0.9)
 fig.suptitle('Distribución de variables predictoras numéricas', fontsize = 10, fontweight = "bold");
 
 
-# In[12]:
+# In[13]:
 
 
 df.children.value_counts().sort_index()
@@ -358,19 +368,19 @@ df.children.value_counts().sort_index()
 # 
 # No es recomendable tener una variable numérica que tome pocos valores, sobre todo si la mayoría de ellos se concentran en uno sólo de estos. Así que sería buena idea transformar esta variable a categórica. No sólo eso, sino además concentrar todas las observaciones que se hacen para número de hijos igual o mayor que 3 en una sóla categoría (*3_mas*), ya que las categorías 4 y 5 hijos apenas tienen representación.
 
-# In[13]:
+# In[14]:
 
 
 df.children = df.children.astype("str")
 
 
-# In[14]:
+# In[15]:
 
 
 df.dtypes
 
 
-# In[15]:
+# In[16]:
 
 
 children_replace = {'3': "3_mas", '4': "3_mas", '5': "3_mas"}
@@ -378,7 +388,7 @@ children_replace = {'3': "3_mas", '4': "3_mas", '5': "3_mas"}
 df['children'] = df['children'].map(children_replace).fillna(df['children'])
 
 
-# In[16]:
+# In[17]:
 
 
 df.children.value_counts().sort_index()
@@ -388,7 +398,7 @@ df.children.value_counts().sort_index()
 # 
 # Actualizamos nuestras listas de variables.
 
-# In[17]:
+# In[18]:
 
 
 featuresNum = ['age', 'bmi']
@@ -396,13 +406,13 @@ featuresCat = ['sex', 'children', 'smoker', 'region']
 label = 'charges'
 
 
-# In[18]:
+# In[19]:
 
 
 df[featuresNum].describe()
 
 
-# In[19]:
+# In[20]:
 
 
 fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(12, 5))
@@ -430,14 +440,14 @@ fig.suptitle('Distribución de variables predictoras numéricas', fontsize = 10,
 
 # Calculamos la correlación entre las variables predictoras y la variable respuesta.
 
-# In[20]:
+# In[21]:
 
 
 corr = round(df.corr(), 3)
 corr.style.background_gradient()
 
 
-# In[21]:
+# In[22]:
 
 
 fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(12, 5))
@@ -478,7 +488,7 @@ fig.suptitle('Correlación con charges', fontsize = 10, fontweight = "bold");
 # 
 # Hacemos ahora una representación mediante gráficos de barras de la distribución de las variables categóricas.
 
-# In[44]:
+# In[23]:
 
 
 fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(12, 5))
@@ -500,7 +510,7 @@ fig.suptitle('Distribución de variables categóricas',
 
 # Para hacernos una idea de la correlación entre las variables categóricas y la variable respuesta, mostraremos su distribución, en este caso mediante un gráfico de cajas y otro de violín.
 
-# In[49]:
+# In[24]:
 
 
 fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(12, 10))
@@ -525,7 +535,7 @@ plt.subplots_adjust(top = 0.9)
 fig.suptitle('Distribución de variables categóricas', fontsize = 10, fontweight = "bold");
 
 
-# In[48]:
+# In[25]:
 
 
 fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(12, 10))
@@ -576,7 +586,7 @@ print(corr[label].sort_values(ascending=False))
 
 # En las líneas posteriores se ha optado por unificar los valores de la variable *children*, pasando a tener únicamente los valores *0* hijos y *1_mas*. No obsante no se ha conseguido ni aún así obtener una correlación aceptable.
 
-# In[50]:
+# In[28]:
 
 
 children_replace = {'1': "1_mas", '2': "1_mas", '3_mas': "1_mas"}
@@ -586,7 +596,7 @@ df['children'] = df['children'].map(children_replace).fillna(df['children'])
 df.children.value_counts().sort_index()
 
 
-# In[51]:
+# In[29]:
 
 
 fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(12, 5))
@@ -604,31 +614,52 @@ fig.suptitle('Distribución de variables categóricas',
              fontsize = 10, fontweight = "bold");
 
 
-# In[53]:
+# In[30]:
 
 
 df3 = pd.get_dummies(df, columns= featuresCat)
 df3.info()
 
 
-# In[55]:
+# In[31]:
 
 
 corr = df3.corr()
 print(corr[label].sort_values(ascending=False))
 
 
-# ## 4. División de datos de entrenamiento y test
+# ## 4. Preprocesado
+
+# Estandarizamos las variables numéricas para que se midan en la misma escala. Utilizaremos el escalador MinMax, el cual otorga valores entre 0 y 1, siendo estos el valor mínimo y máximo respectivamente.
+
+# In[32]:
+
+
+scaler = MinMaxScaler()
+df[featuresNum] = scaler.fit_transform(df[featuresNum])
+df
+
+
+# In[33]:
+
+
+df = pd.get_dummies(df, columns= featuresCat)
+df.info()
+
+
+# ## 5. División de datos de entrenamiento y test
 # 
 # Dadas las circunstancias de correlación entre variables independientes y respuesta, se opta por prescindir de las variables *sex*, *children* y *region*.
 # 
 # Seguidamente se hacen las particiones correspondientes a los grupos de entrenamiento y test, siendo el tamaño de los datos de entrenamiento de un 80% con respecto al dataset completo.
 
-# In[61]:
+# In[34]:
 
 
 X_train, X_test, y_train, y_test = train_test_split(
-                                        df.drop(columns = ['charges', 'sex', 'children', 'region'], axis = 'columns'),
+                                        df.drop(columns = ['charges', 'sex_female', 'sex_male', 
+                                                           'children_0', 'children_1_mas', 'region_northeast',
+                                                           'region_northwest', 'region_southeast', 'region_southwest'], axis = 'columns'),
                                         df[label],
                                         train_size   = 0.8,
                                         random_state = 1234,
@@ -636,7 +667,7 @@ X_train, X_test, y_train, y_test = train_test_split(
                                     )
 
 
-# In[62]:
+# In[35]:
 
 
 print("Partición datos de entrenamento")
@@ -644,7 +675,7 @@ print("-----------------------")
 print(y_train.describe())
 
 
-# In[63]:
+# In[36]:
 
 
 print("Partición datos de test")
@@ -652,27 +683,75 @@ print("-----------------------")
 print(y_test.describe())
 
 
-# In[64]:
+# In[37]:
 
 
 X_train.info()
 
 
-# ## 5. Preprocesado
+# ## 6. Creación de un modelo
 
-# In[34]:
+# > En un primer lugar se entrenarán y evaluarán diversos modelos de forma simple. Más adelante en este ejercicio se añadirán otros algoritmos de regresión, así como otras técnicas de validación, evaluación y optimización de hiperparámetros más complejas.
+
+# Comenzamos en primer lugar entrenando un modelo de regresión lineal. Posteriormente usaremos el modelo para predecir los cargos al seguro de nuestro conjunto de datos de test.
+
+# In[44]:
 
 
-#estandarizado de variables numéricas
+model = LinearRegression().fit(X_train, y_train)
 
 
-# ## 6. Creación del modelo
+# In[49]:
+
+
+pred = model.predict(X_test)
+
+
+# ## 7. Evaluar el modelo
+
+# Hacemos una comparativa gráfica entre los valores de cargo actuales y los valores predichos.
+
+# In[59]:
+
+
+plt.figure(figsize=(12,12))
+plt.scatter(y_test, pred)
+plt.xlabel('Valor actual')
+plt.ylabel('Valor predicho')
+plt.title('Cargos del seguro (Charges)')
+
+z = np.polyfit(y_test, pred, 1)
+p = np.poly1d(z)
+plt.plot(y_test, p(y_test), color='magenta')
+
+plt.show()
+
+
+# A pesar de que los resultados muestran una clara tendencia diagonal en los datos, hay un grupo de ellos en la zona central que no han sido predichos correctamente.
+# 
+# Para cuantificar el nivel de residuo en el modelo, calculamos la raíz del error cuadrático medio ($RMSE$) y el indicador $R^2$.
+
+# In[51]:
+
+
+mse = mean_squared_error(y_test, pred)
+rmse = np.sqrt(mse)
+print("RMSE:", rmse)
+
+r2 = r2_score(y_test, pred)
+print("R2:", r2)
+
 
 # <br><br><br><br>TO DO:
 # 
 # * Finalizar documentación
 # * Utilización de pipelines y column transformer.
-# * Creación de un modelo de predicción.
 # * Utilización de diferentes algoritmos.
 # * Hiperparámetros.
 # * Validación y métricas.
+
+# In[ ]:
+
+
+
+
