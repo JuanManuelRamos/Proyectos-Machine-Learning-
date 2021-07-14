@@ -4,8 +4,9 @@
 # ## Machine Learning - Problema de Regresión
 # 
 # En este ejercicio partiremos de un dataset de prueba para su análisis y la posterior creación de un modelo de regresión que tratará de estimar el valor de una variable dependiente en casos futuros.
+# Se seguirán los pasos recomendados de análisis de los datos, preprocesado, división de los datos, creación de modelos y evaluación de los mismos.
 # 
-# Se usará **Jupyter Notebook** y **Python** como lenguaje de programación.
+# Se usará **Jupyter Notebook** con **Python** como lenguaje de programación.
 # 
 # <br><br>**Juan Manuel Ramos Pérez**
 
@@ -15,7 +16,7 @@
 # 
 # Comenzamos estableciendo todas las librerías de Python que nos harán falta para la realización del ejercicio, ordenadas según su función.
 
-# In[48]:
+# In[1]:
 
 
 # Tratamiento de datos
@@ -33,7 +34,7 @@ import matplotlib.ticker as ticker
 import seaborn as sns
 
 
-# Preprocesado y modelado
+# Preprocesado
 # ========================================
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.compose import ColumnTransformer
@@ -48,21 +49,24 @@ from sklearn.metrics import confusion_matrix
 from sklearn.metrics import roc_curve
 from sklearn.metrics import roc_auc_score
 
-from sklearn.linear_model import LogisticRegression
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn import tree
-from sklearn.naive_bayes import GaussianNB
-from sklearn import svm
-
 
 # Modelos
 # ========================================
 from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import RidgeCV
+from sklearn.linear_model import LassoCV
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.svm import SVR
+
+from sklearn.model_selection import GridSearchCV
 
 
 # Métricas
 # ========================================
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.metrics import mean_squared_error, make_scorer, r2_score
 
 
 # In[2]:
@@ -683,27 +687,48 @@ print("-----------------------")
 print(y_test.describe())
 
 
+# Comprobamos que la distribución de la variable respuesta sea similar en los sets de entrenamiento y test. Una distribución muy dispar entre ambos sets podría dar problemas al modelo a la hora de enfrentarlo a los datos de test.
+
 # In[37]:
 
 
-X_train.info()
+fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(12, 5))
+axes = axes.flat
+dt = [y_train, y_test]
+title = ["Entrenamiento", "Test"]
+
+for i, d in enumerate(dt):
+    sns.histplot(
+        data    = d,
+        #x       = lb,
+        stat    = "count",
+        kde     = True,
+        color   = (list(plt.rcParams['axes.prop_cycle'])*2)[i]["color"],
+        line_kws= {'linewidth': 2},
+        alpha   = 0.3,
+        ax      = axes[i]
+    )
+    axes[i].set_title(title[i], fontsize = 7, fontweight = "bold")
+    axes[i].tick_params(labelsize = 6)
+    axes[i].set_xlabel("")
+
+
+    
+fig.tight_layout()
+plt.subplots_adjust(top = 0.9)
+fig.suptitle('Distribución de la variable respuesta en el set de entrenamiento y test', fontsize = 10, fontweight = "bold");
 
 
 # ## 6. Creación de un modelo
 
-# > En un primer lugar se entrenarán y evaluarán diversos modelos de forma simple. Más adelante en este ejercicio se añadirán otros algoritmos de regresión, así como otras técnicas de validación, evaluación y optimización de hiperparámetros más complejas.
-
 # Comenzamos en primer lugar entrenando un modelo de regresión lineal. Posteriormente usaremos el modelo para predecir los cargos al seguro de nuestro conjunto de datos de test.
 
-# In[44]:
+# #### REGRESIÓN LINEAL
+
+# In[38]:
 
 
 model = LinearRegression().fit(X_train, y_train)
-
-
-# In[49]:
-
-
 pred = model.predict(X_test)
 
 
@@ -711,18 +736,18 @@ pred = model.predict(X_test)
 
 # Hacemos una comparativa gráfica entre los valores de cargo actuales y los valores predichos.
 
-# In[59]:
+# In[39]:
 
 
-plt.figure(figsize=(12,12))
+plt.figure(figsize=(8,8))
 plt.scatter(y_test, pred)
 plt.xlabel('Valor actual')
 plt.ylabel('Valor predicho')
-plt.title('Cargos del seguro (Charges)')
+plt.title('RL - Cargos del seguro (Charges)')
 
 z = np.polyfit(y_test, pred, 1)
 p = np.poly1d(z)
-plt.plot(y_test, p(y_test), color='magenta')
+plt.plot(y_test, p(y_test), color='black')
 
 plt.show()
 
@@ -731,27 +756,412 @@ plt.show()
 # 
 # Para cuantificar el nivel de residuo en el modelo, calculamos la raíz del error cuadrático medio ($RMSE$) y el indicador $R^2$.
 
-# In[51]:
+# In[40]:
 
 
 mse = mean_squared_error(y_test, pred)
-rmse = np.sqrt(mse)
-print("RMSE:", rmse)
+rmse_RL = np.sqrt(mse)
+print("RMSE:", rmse_RL)
 
-r2 = r2_score(y_test, pred)
-print("R2:", r2)
+r2_RL = r2_score(y_test, pred)
+print("R2:", r2_RL)
 
 
-# <br><br><br><br>TO DO:
+# ## 8. Utilización de otros algoritmos e hiperparámetros
 # 
-# * Finalizar documentación
-# * Utilización de pipelines y column transformer.
-# * Utilización de diferentes algoritmos.
-# * Hiperparámetros.
-# * Validación y métricas.
+# En esta sección se utilizarán diversos algoritmos de regresión para crear diferentes modelos a los que se le aplicará la técnica de validación cruzada, o cross validation, para tratar de encontrar los mejores hiperparámetros de cada uno de ellos.
 
-# In[ ]:
+# En primer lugar, y ya que hemos comenzado con un modelo de regresión lineal, aplicaremos las correspondientes regularizaciones **Ridge** y **Lasso**.
 
+# #### RIDGE con CV
 
+# In[41]:
 
 
+model = RidgeCV(alphas=[1e-15, 1e-10, 1e-8, 1e-4, 1e-3, 1e-2, 1e-1, 1, 5, 10, 20], store_cv_values=True).fit(X_train, y_train)
+pred = model.predict(X_test)
+
+
+# In[42]:
+
+
+plt.clf()
+plt.figure(figsize=(8,8))
+plt.scatter(y_test, pred)
+plt.xlabel('Valor actual')
+plt.ylabel('Valor predicho')
+plt.title('R - Cargos del seguro (Charges)')
+
+z = np.polyfit(y_test, pred, 1)
+p = np.poly1d(z)
+plt.plot(y_test, p(y_test), color='black')
+
+plt.show()
+
+
+print("Mejor alpha:", model.alpha_)
+print("CV scores: ", np.mean(model.cv_values_, axis=0))
+
+mse = mean_squared_error(y_test, pred)
+rmse_R = np.sqrt(mse)
+print("RMSE:", rmse_R)
+
+r2_R = r2_score(y_test, pred)
+print("R2:", r2_R)
+
+
+# #### LASSO con CV
+
+# In[43]:
+
+
+model = LassoCV(alphas=[1e-15, 1e-10, 1e-8, 1e-5,1e-4, 1e-3, 1e-2, 0.1, 1, 5, 10]).fit(X_train, y_train)
+pred = model.predict(X_test)
+
+
+# In[44]:
+
+
+plt.clf()
+plt.figure(figsize=(8,8))
+plt.scatter(y_test, pred)
+plt.xlabel('Valor actual')
+plt.ylabel('Valor predicho')
+plt.title('L - Cargos del seguro (Charges)')
+
+z = np.polyfit(y_test, pred, 1)
+p = np.poly1d(z)
+plt.plot(y_test, p(y_test), color='black')
+
+plt.show()
+
+
+print("Mejor alpha:", model.alpha_)
+
+mse = mean_squared_error(y_test, pred)
+rmse_L = np.sqrt(mse)
+print("RMSE:", rmse_L)
+
+r2_L = r2_score(y_test, pred)
+print("R2:", r2_L)
+
+
+# Seguidamente se probarán con los algoritmos de regresión **K-Nearest Neighbors**, **Support Vector Machine**, **Decision Tree**, **Random Search** y **Gradient Boosting**. En todos ellos se utilizará **GridSearchCV**, una herramienta que implementa métodos de entrenamiento y evaluación dado un algoritmo y un conjunto de hiperparámetros que serán optimizados mediante validación cruzada.
+
+# #### K-NEAREST NEIGHBORS REGRESSOR con GridSearchCV
+
+# In[45]:
+
+
+# K Neighbors Regressor con Grid Search CV
+
+# modelo
+model = KNeighborsRegressor()
+
+# parámetros
+params = {
+ 'n_neighbors': [1, 5, 10, 15, 20, 25, 30],
+ 'weights': ['uniform', 'distance']  
+}
+
+# métrica
+score = make_scorer(r2_score)
+
+# gridsearchCV
+gridsearch = GridSearchCV(model, params, scoring=score, cv=5, return_train_score=True)
+gridsearch.fit(X_train, y_train)
+
+# Evaluación del mejor modelo
+model = gridsearch.best_estimator_
+pred = model.predict(X_test)
+
+
+# In[46]:
+
+
+plt.clf()
+plt.figure(figsize=(8,8))
+plt.scatter(y_test, pred)
+plt.xlabel('Valor actual')
+plt.ylabel('Valor predicho')
+plt.title('KNN - Cargos del seguro (Charges)')
+
+z = np.polyfit(y_test, pred, 1)
+p = np.poly1d(z)
+plt.plot(y_test, p(y_test), color='black')
+
+plt.show()
+
+
+print("Mejor parámetro:", gridsearch.best_params_, "\n")
+
+mse = mean_squared_error(y_test, pred)
+rmse_KN = np.sqrt(mse)
+print("RMSE:", rmse_KN)
+
+r2_KN = r2_score(y_test, pred)
+print("R2:", r2_KN)
+
+
+# #### SUPPORT VECTOR REGRESSION con GridSearch CV
+
+# In[47]:
+
+
+# Support Vector Regression con Grid Search CV
+
+# modelo
+model = SVR()
+
+# parámetros
+params = {
+ 'C': [0.1, 1, 10, 100], 
+ 'gamma': [1, 0.1, 0.01, 0.001],
+ 'epsilon': [0.1, 0.2],
+ 'kernel': ['rbf', 'poly', 'sigmoid']
+}
+
+# métrica
+score = make_scorer(r2_score)
+
+# gridsearchCV
+gridsearch = GridSearchCV(model, params, scoring=score, cv=5, return_train_score=True)
+gridsearch.fit(X_train, y_train)
+
+# Evaluación del mejor modelo
+model = gridsearch.best_estimator_
+pred = model.predict(X_test)
+
+
+# In[48]:
+
+
+plt.clf()
+plt.figure(figsize=(8,8))
+plt.scatter(y_test, pred)
+plt.xlabel('Valor actual')
+plt.ylabel('Valor predicho')
+plt.title('SV - Cargos del seguro (Charges)')
+
+z = np.polyfit(y_test, pred, 1)
+p = np.poly1d(z)
+plt.plot(y_test, p(y_test), color='black')
+
+plt.show()
+
+
+print("Mejor parámetro:", gridsearch.best_params_, "\n")
+
+mse = mean_squared_error(y_test, pred)
+rmse_SV = np.sqrt(mse)
+print("RMSE:", rmse_SV)
+
+r2_SV = r2_score(y_test, pred)
+print("R2:", r2_SV)
+
+
+# #### DECISION TREE REGRESSOR con GridSearchCV
+
+# In[49]:
+
+
+# Decision Tree Regressor con Grid Search CV
+
+# modelo
+model = DecisionTreeRegressor()
+
+# parámetros
+params = {
+ 'max_depth': [10, 50, 100, None],
+ 'max_features': ['auto', 'sqrt'],
+ 'min_samples_split': [10, 20, 30, 40, 50]
+}
+
+# métrica
+score = make_scorer(r2_score)
+
+# gridsearchCV
+gridsearch = GridSearchCV(model, params, scoring=score, cv=5, return_train_score=True)
+gridsearch.fit(X_train, y_train)
+
+# Evaluación del mejor modelo
+model = gridsearch.best_estimator_
+pred = model.predict(X_test)
+
+
+# In[50]:
+
+
+plt.clf()
+plt.figure(figsize=(8,8))
+plt.scatter(y_test, pred)
+plt.xlabel('Valor actual')
+plt.ylabel('Valor predicho')
+plt.title('DT - Cargos del seguro (Charges)')
+
+z = np.polyfit(y_test, pred, 1)
+p = np.poly1d(z)
+plt.plot(y_test, p(y_test), color='black')
+
+plt.show()
+
+
+print("Mejor parámetro:", gridsearch.best_params_, "\n")
+
+mse = mean_squared_error(y_test, pred)
+rmse_DT = np.sqrt(mse)
+print("RMSE:", rmse_DT)
+
+r2_DT = r2_score(y_test, pred)
+print("R2:", r2_DT)
+
+
+# #### RANDOM FOREST REGRESSOR con GridSearchCV
+
+# In[51]:
+
+
+# Random Forest Regressor con Grid Search CV
+
+# modelo
+model = RandomForestRegressor()
+
+# parámetros
+params = {
+ 'max_depth': [10, 50, 100, None],
+ 'max_features': ['auto', 'sqrt'],
+ 'n_estimators': [100, 1000, 2000]
+}
+
+# métrica
+score = make_scorer(r2_score)
+
+# gridsearchCV
+gridsearch = GridSearchCV(model, params, scoring=score, cv=5, return_train_score=True)
+gridsearch.fit(X_train, y_train)
+
+# Evaluación del mejor modelo
+model = gridsearch.best_estimator_
+pred = model.predict(X_test)
+
+
+# In[52]:
+
+
+plt.clf()
+plt.figure(figsize=(8,8))
+plt.scatter(y_test, pred)
+plt.xlabel('Valor actual')
+plt.ylabel('Valor predicho')
+plt.title('RF - Cargos del seguro (Charges)')
+
+z = np.polyfit(y_test, pred, 1)
+p = np.poly1d(z)
+plt.plot(y_test, p(y_test), color='black')
+
+plt.show()
+
+
+print("Mejor parámetro:", gridsearch.best_params_, "\n")
+
+mse = mean_squared_error(y_test, pred)
+rmse_RF = np.sqrt(mse)
+print("RMSE:", rmse_RF)
+
+r2_RF = r2_score(y_test, pred)
+print("R2:", r2_RF)
+
+
+# #### GRADIENT BOOSTING REGRESSOR con GridSearchCV
+
+# In[53]:
+
+
+# Gradient Boost Regressor con Grid Search CV
+
+# modelo
+model = GradientBoostingRegressor()
+
+# parámetros
+params = {
+ 'learning_rate': [0.1, 0.5, 1.0],
+ 'n_estimators' : [50, 100, 150]
+ }
+
+# métrica
+score = make_scorer(r2_score)
+
+# gridsearchCV
+gridsearch = GridSearchCV(model, params, scoring=score, cv=5, return_train_score=True)
+gridsearch.fit(X_train, y_train)
+
+# Evaluación del mejor modelo
+model = gridsearch.best_estimator_
+pred = model.predict(X_test)
+
+
+# In[54]:
+
+
+plt.clf()
+plt.figure(figsize=(8,8))
+plt.scatter(y_test, pred)
+plt.xlabel('Valor actual')
+plt.ylabel('Valor predicho')
+plt.title('GB - Cargos del seguro (Charges)')
+
+z = np.polyfit(y_test, pred, 1)
+p = np.poly1d(z)
+plt.plot(y_test, p(y_test), color='black')
+
+plt.show()
+
+
+print("Mejor parámetro:", gridsearch.best_params_, "\n")
+
+mse = mean_squared_error(y_test, pred)
+rmse_GB = np.sqrt(mse)
+print("RMSE:", rmse_GB)
+
+r2_GB = r2_score(y_test, pred)
+print("R2:", r2_GB)
+
+
+# ## 9. Comparativa de resultados
+# 
+# En esta última parte se compararán los resultados de la evaluación de cada uno de los modelos creados anteriormente.
+
+# In[55]:
+
+
+error = pd.DataFrame({
+                        'modelo': ['Linear Regression', 'Ridge', 'Lasso', 'K-NNeighbors', 'Support Vector', 'Decision Tree',
+                                   'Random Forest', 'Gradient Boosting'],
+                        'rmse': [rmse_RL, rmse_L, rmse_R, rmse_KN, rmse_SV, rmse_DT, rmse_RF, rmse_GB],
+                        'r2': [r2_RL, r2_L, r2_R, r2_KN, r2_SV, r2_DT, r2_RF, r2_GB]
+                     })
+error = error.sort_values('rmse', ascending=False)
+
+
+fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(12, 5))
+
+axes[0].hlines(error.modelo, xmin=0, xmax=error.rmse)
+axes[0].plot(error.rmse, error.modelo, "o", color='black')
+axes[0].tick_params(axis='y', which='major', labelsize=12)
+axes[0].set_title('RMSE')
+    
+axes[1].hlines(error.modelo, xmin=0, xmax=error.r2)
+axes[1].plot(error.r2, error.modelo, "o", color='black')
+axes[1].tick_params(axis='y', which='major', labelsize=12)
+axes[1].set_title('R2')
+
+fig.tight_layout()
+
+
+# ### FUENTES
+# 
+# * Machine learning con Python y Scikit-learn by Joaquín Amat Rodrigo, available under a Attribution 4.0 International (CC BY 4.0) at https://www.cienciadedatos.net/documentos/py06_machine_learning_python_scikitlearn.html
+# 
+# * Fitting empirical distribution to theoretical ones with Scipy (Python)?: https://stackoverflow.com/questions/6620471/fitting-empirical-distribution-to-theoretical-ones-with-scipy-python?lq=1
+# 
+# * Creación de modelos de Machine Learning: https://docs.microsoft.com/es-es/learn/paths/create-machine-learn-models/
