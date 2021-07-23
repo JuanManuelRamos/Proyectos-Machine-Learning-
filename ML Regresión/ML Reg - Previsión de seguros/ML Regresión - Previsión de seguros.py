@@ -84,7 +84,7 @@ pd.set_option('display.max_rows', None)
 # 
 # Cargamos el dataset en el proyecto. Este se puede encontrar disponible en [Kaggle](https://www.kaggle.com/mirichoi0218/insurance) y [Github](https://github.com/stedy/Machine-Learning-with-R-datasets).
 # 
-# Este dataset está compuesto por 1338 filas, y recoge diferentes datos personales y médicos de clientes con el objetivo de establecer la cantidad económica a percibir por parte de un seguro. La idea es crear un modelo que sea capaz de predecir de forma precisa los costes del seguro que se le aplicarán a un cliente en función de los datos mencionados.
+# Este dataset está compuesto por 1338 instancias, y recoge diferentes datos personales y médicos de clientes con el objetivo de establecer la cantidad económica a percibir por parte de un seguro. La idea es crear un modelo que sea capaz de predecir de forma precisa los costes del seguro que se le aplicarán a un cliente en función de los datos mencionados.
 # 
 # Las columnas de las que se compone el dataset son las siguientes:
 # * Edad (Age): numérica
@@ -98,17 +98,19 @@ pd.set_option('display.max_rows', None)
 # 
 # La variable "charges" será nuestra variable respuesta, o variable dependiente, aquella que queremos que nuestro modelo estime en datos futuros. Al tratarse de una variable numérica continua estamos ante un problema de regresión, en el que tenemos como variables independientes o predictores tanto variables numéricas como categóricas.
 
-# In[3]:
+# In[56]:
 
 
 df = pd.read_csv('data/insurance.csv')
-df
+df.head(10)
 
 
 # ## 3. Análisis de los datos
 # 
 # En esta parte del ejercicio nos centraremos en analizar los datos de los que disponemos. Comprobar su distribución en el dataset, averiguar si se están reconociendo de forma adecuada, duplicidad, datos faltantes, así como decidir si debemos realizar algún o algunos cambios sobre ellos en el apartado de preprocesado de cara a construir el modelo de predicción.
 
+# #### 3.1. TIPOS DE DATOS
+# 
 # En primer lugar comprobamos el tipo de dato interpretado por el dataframe de Pandas, y verificamos que todo está como se espera.
 
 # In[4]:
@@ -117,6 +119,8 @@ df
 df.dtypes
 
 
+# #### 3.2. VALORES FALTANTES
+# 
 # Comprobamos si hay celdas vacías en alguno de los registros. 
 # 
 # Esta comprobación es importante, ya que la existencia de valores nulos o vacíos pueden llegar a tener un impacto negativo considerable en el entrenamiento del modelo. En caso de que los hubiese tendríamos que decidir de qué forma lidiar con ellos, o bien eliminando el registro completo del dataset o bien sustituyendo el valor vacío por otro.
@@ -127,6 +131,8 @@ df.dtypes
 df.isna().sum().sort_values()
 
 
+# #### 3.3. FILAS DUPLICADAS
+# 
 # Comprobamos si hay filas duplicadas.
 # 
 # En este caso identificamos una fila duplicada. Al tratarse solo de una observación procederemos a eliminarla del dataset.
@@ -143,6 +149,8 @@ df[df.duplicated()]
 df = df.drop(df.index[581])
 
 
+# #### 3.4. SEPARACIÓN DE VARIABLES
+# 
 # Creamos listas para separar las variables independientes en características, o features, y éstas a su vez en numéricas y categóricas, y la variable dependiente o label.
 # 
 # Esto nos va a permitir hacer referencia a ellas más adelante de forma más cómoda.
@@ -155,7 +163,7 @@ featuresCat = ['sex', 'smoker', 'region']
 label = 'charges'
 
 
-# #### VARIABLE RESPUESTA
+# #### 3.5. VARIABLE RESPUESTA
 # 
 # Ya que nuestra variable dependiente, o variable respuesta, se trata de una variable numérica continua, resulta interesante observar el tipo de distribución que tiene en el dataset.
 # 
@@ -320,13 +328,13 @@ ax.set_ylabel(ylabel)
 
 # Gracias a ello podemos comprobar que la distribución de nuestra variable respuesta se ajusta más a la de una **exGaussian distribution**, es decir, una distribución Gaussiana exponencialmente modificada.
 
-# #### VARIABLES NUMÉRICAS
+# #### 3.6. VARIABLES PREDICTORAS NUMÉRICAS
 # 
 # En este apartado haremos un análisis de las variables independientes numéricas. 
 
 # En primer lugar echaremos un vistazo general.
 # 
-# Se puede comprobar que, a pesar de formar parte de variables completamente diferentes por definición, "age" y "bmi" comparten un rango de valores similar, no así la variable "children", la cual toma unos pocos valores.
+# Se puede comprobar que, a pesar de formar parte de variables completamente diferentes por definición, **age** y **bmi** comparten un rango de valores similar, no así la variable **children**, la cual toma unos pocos valores.
 
 # In[11]:
 
@@ -368,7 +376,9 @@ fig.suptitle('Distribución de variables predictoras numéricas', fontsize = 10,
 df.children.value_counts().sort_index()
 
 
-# Como ya se había comprobado desde la descripción de estas variables, y se corrobora en este último paso de forma más visual, la variable *children* toma unos pocos valores. 
+# #### 3.6.1. CONVERSIÓN DE VARIABLE NUMÉRICA A CATEGÓRICA
+# 
+# Como ya se había comprobado desde la descripción de estas variables, y se corrobora en este último paso de forma más visual, la variable **children** toma unos pocos valores. 
 # 
 # No es recomendable tener una variable numérica que tome pocos valores, sobre todo si la mayoría de ellos se concentran en uno sólo de estos. Así que sería buena idea transformar esta variable a categórica. No sólo eso, sino además concentrar todas las observaciones que se hacen para número de hijos igual o mayor que 3 en una sóla categoría (*3_mas*), ya que las categorías 4 y 5 hijos apenas tienen representación.
 
@@ -442,6 +452,8 @@ plt.subplots_adjust(top = 0.9)
 fig.suptitle('Distribución de variables predictoras numéricas', fontsize = 10, fontweight = "bold");
 
 
+# #### 3.6.2. CORRELACIÓN RESPECTO A LA VARIABLE RESPUESTA
+# 
 # Calculamos la correlación entre las variables predictoras y la variable respuesta.
 
 # In[21]:
@@ -482,13 +494,13 @@ fig.suptitle('Correlación con charges', fontsize = 10, fontweight = "bold");
 
 # De estas operaciones sacamos algunas conclusiones:
 # 
-# De forma general, se considera que una correlación es fuerte a partir de un valor de $\pm 0.6 \sim \pm0.7$, y débil cuando está entre $0$ y $\pm3$. Por ello, la correlación entre las variables *age* y *bmi* respecto a *charges* es baja.
+# De forma general, se considera que una correlación es fuerte a partir de un valor de $\pm 0.6 \sim \pm0.7$, y débil cuando está entre $0$ y $\pm3$. Por ello, la correlación entre las variables **age** y **bmi** respecto a **charges** es baja.
 # 
 # El punto negativo es que sería deseable que existiese una correlación alta entre las variables predictoras y la variable que queremos predecir. Si así fuera, nuestro modelo tendría más posibilidades de predecir dicha variable correctamente.
 # 
-# El punto positivo es que no es deseable, de cara a la fiabilidad del modelo, que exista una alta correlación entre las variables independientes. Y en este caso tampoco la hay entre las variables *age* y *bmi*.
+# El punto positivo es que no es deseable, de cara a la fiabilidad del modelo, que exista una alta correlación entre las variables independientes. Y en este caso tampoco la hay entre las variables **age** y **bmi**.
 
-# #### VARIABLES CATEGÓRICAS
+# #### 3.7. VARIABLES PREDICTORAS CATEGÓRICAS
 # 
 # Hacemos ahora una representación mediante gráficos de barras de la distribución de las variables categóricas.
 
@@ -510,7 +522,7 @@ fig.suptitle('Distribución de variables categóricas',
              fontsize = 10, fontweight = "bold");
 
 
-# Comprobamos que la proproción de valores en *sex* y *region* está muy igualada. Algo menos en la variable *children*, en la que la mayoría de los casos se los lleva un sólo valor. Y bastante más descompensada en *smoker*.
+# Comprobamos que la proproción de valores en **sex** y **region** está muy igualada. Algo menos en la variable **children**, en la que la mayoría de los casos se los lleva un sólo valor. Y bastante más descompensada en **smoker**.
 
 # Para hacernos una idea de la correlación entre las variables categóricas y la variable respuesta, mostraremos su distribución, en este caso mediante un gráfico de cajas y otro de violín.
 
@@ -564,8 +576,10 @@ plt.subplots_adjust(top=0.9)
 fig.suptitle('Distribución del precio por variables categóricas', fontsize = 10, fontweight = "bold");
 
 
-# Después de visualizar de forma gráfica la distribución de las variables categóricas se puede deducir que la correlación de *charges* respecto a las variables *sex*, *children* y *region* es prácticamente inexistente, ya que para todos los valores posibles de estas variables se toman prácticamente los mismos valores de *charges*. No así en cuanto a la variable *smoker*, en la que sí que se observa una clara diferencia del valor de *charges* cuando se trata de un fumador o un no fumador.
+# Después de visualizar de forma gráfica la distribución de las variables categóricas se puede deducir que la correlación de **charges** respecto a las variables **sex**, **children** y **region** es prácticamente inexistente, ya que para todos los valores posibles de estas variables se toman prácticamente los mismos valores de **charges**. No así en cuanto a la variable **smoker**, en la que sí que se observa una clara diferencia del valor de **charges** cuando se trata de un fumador o un no fumador.
 
+# #### 3.8. CORRELACIÓN DE VARIABLES PREDICTORAS CON VARIABLE RESPUESTA
+# 
 # Para tener un valor exacto de correlación, y con la idea de crear posteriormente el modelo de predicción, convertiremos todas las variables categóricas en numéricas binarizándolas mediante el método *get_dummies*.
 
 # In[26]:
@@ -584,11 +598,11 @@ print(corr[label].sort_values(ascending=False))
 
 # Ahora sí, tenemos unos resultados completos de correlación de todas las variables independientes con respecto a la variable dependiente.
 # 
-# De esta lista podemos observar que la variable que más nos va a ayudar a la hora de predecir datos futuros es *smoker*. Sería deseable contar con un mayor número de variables independientes con correlaciones fuertes para tener un modelo de preodicción más sólido.
+# De esta lista podemos observar que la variable que más nos va a ayudar a la hora de predecir datos futuros es **smoker**. Sería deseable contar con un mayor número de variables independientes con correlaciones fuertes para tener un modelo de preodicción más sólido.
 # 
 # El análsis de los datos es importante para observar este tipo de sucesos y valorar la posibilidad de hacer modificaciones en los mismos, o descartar directamente las variables que no nos vayan a aportar información útil.
 
-# En las líneas posteriores se ha optado por unificar los valores de la variable *children*, pasando a tener únicamente los valores *0* hijos y *1_mas*. No obsante no se ha conseguido ni aún así obtener una correlación aceptable.
+# En las líneas posteriores se ha optado por unificar los valores de la variable **children**, pasando a tener únicamente los valores *0* hijos y *1_mas*. No obsante no se ha conseguido ni aún así obtener una correlación aceptable.
 
 # In[28]:
 
@@ -634,15 +648,21 @@ print(corr[label].sort_values(ascending=False))
 
 # ## 4. Preprocesado
 
-# Estandarizamos las variables numéricas para que se midan en la misma escala. Utilizaremos el escalador MinMax, el cual otorga valores entre 0 y 1, siendo estos el valor mínimo y máximo respectivamente.
+# #### 4.1. ESTANDARIZACIÓN DE VARIABLES NUMÉRICAS
+# 
+# Estandarizamos las variables numéricas para que se midan en la misma escala. Utilizaremos el escalador *MinMax*, el cual otorga valores entre 0 y 1, siendo estos el valor mínimo y máximo respectivamente.
 
-# In[32]:
+# In[57]:
 
 
 scaler = MinMaxScaler()
 df[featuresNum] = scaler.fit_transform(df[featuresNum])
-df
+df.head(10)
 
+
+# #### 4.2. CONVERSIÓN DE VARIABLES CATEGÓRICAS
+# 
+# Convertimos las variables categóricas a variables dummies, es decir, creamos una variable para cada valor de la categoría.
 
 # In[33]:
 
@@ -653,7 +673,9 @@ df.info()
 
 # ## 5. División de datos de entrenamiento y test
 # 
-# Dadas las circunstancias de correlación entre variables independientes y respuesta, se opta por prescindir de las variables *sex*, *children* y *region*.
+# 
+# #### 5.1. SEPARACIÓN DE DATOS
+# Dadas las circunstancias de correlación entre variables independientes y respuesta, se opta por prescindir de las variables **sex**, **children** y **region**.
 # 
 # Seguidamente se hacen las particiones correspondientes a los grupos de entrenamiento y test, siendo el tamaño de los datos de entrenamiento de un 80% con respecto al dataset completo.
 
@@ -669,6 +691,8 @@ X_train, X_test, y_train, y_test = train_test_split(
                                         random_state = 1234,
                                         shuffle      = True
                                     )
+
+print ('Datos de entrenamiento: %d\nDatos de test: %d' % (X_train.shape[0], X_test.shape[0]))
 
 
 # In[35]:
@@ -687,6 +711,8 @@ print("-----------------------")
 print(y_test.describe())
 
 
+# #### 5.2. DISTRIBUCIÓN DE LA VARIABLE RESPUESTA
+# 
 # Comprobamos que la distribución de la variable respuesta sea similar en los sets de entrenamiento y test. Una distribución muy dispar entre ambos sets podría dar problemas al modelo a la hora de enfrentarlo a los datos de test.
 
 # In[37]:
@@ -700,7 +726,6 @@ title = ["Entrenamiento", "Test"]
 for i, d in enumerate(dt):
     sns.histplot(
         data    = d,
-        #x       = lb,
         stat    = "count",
         kde     = True,
         color   = (list(plt.rcParams['axes.prop_cycle'])*2)[i]["color"],
@@ -723,7 +748,7 @@ fig.suptitle('Distribución de la variable respuesta en el set de entrenamiento 
 
 # Comenzamos en primer lugar entrenando un modelo de regresión lineal. Posteriormente usaremos el modelo para predecir los cargos al seguro de nuestro conjunto de datos de test.
 
-# #### REGRESIÓN LINEAL
+# ### LINEAR REGRESSION
 
 # In[38]:
 
@@ -773,7 +798,7 @@ print("R2:", r2_RL)
 
 # En primer lugar, y ya que hemos comenzado con un modelo de regresión lineal, aplicaremos las correspondientes regularizaciones **Ridge** y **Lasso**.
 
-# #### RIDGE con CV
+# ### RIDGE con CV
 
 # In[41]:
 
@@ -810,7 +835,7 @@ r2_R = r2_score(y_test, pred)
 print("R2:", r2_R)
 
 
-# #### LASSO con CV
+# ### LASSO con CV
 
 # In[43]:
 
@@ -848,7 +873,7 @@ print("R2:", r2_L)
 
 # Seguidamente se probarán con los algoritmos de regresión **K-Nearest Neighbors**, **Support Vector Machine**, **Decision Tree**, **Random Search** y **Gradient Boosting**. En todos ellos se utilizará **GridSearchCV**, una herramienta que implementa métodos de entrenamiento y evaluación dado un algoritmo y un conjunto de hiperparámetros que serán optimizados mediante validación cruzada.
 
-# #### K-NEAREST NEIGHBORS REGRESSOR con GridSearchCV
+# ### K-NEAREST NEIGHBORS REGRESSOR con GridSearchCV
 
 # In[45]:
 
@@ -903,7 +928,7 @@ r2_KN = r2_score(y_test, pred)
 print("R2:", r2_KN)
 
 
-# #### SUPPORT VECTOR REGRESSION con GridSearch CV
+# ### SUPPORT VECTOR REGRESSION con GridSearch CV
 
 # In[47]:
 
@@ -960,7 +985,7 @@ r2_SV = r2_score(y_test, pred)
 print("R2:", r2_SV)
 
 
-# #### DECISION TREE REGRESSOR con GridSearchCV
+# ### DECISION TREE REGRESSOR con GridSearchCV
 
 # In[49]:
 
@@ -1016,7 +1041,7 @@ r2_DT = r2_score(y_test, pred)
 print("R2:", r2_DT)
 
 
-# #### RANDOM FOREST REGRESSOR con GridSearchCV
+# ### RANDOM FOREST REGRESSOR con GridSearchCV
 
 # In[51]:
 
@@ -1072,7 +1097,7 @@ r2_RF = r2_score(y_test, pred)
 print("R2:", r2_RF)
 
 
-# #### GRADIENT BOOSTING REGRESSOR con GridSearchCV
+# ### GRADIENT BOOSTING REGRESSOR con GridSearchCV
 
 # In[53]:
 
@@ -1149,11 +1174,18 @@ axes[0].hlines(error.modelo, xmin=0, xmax=error.rmse)
 axes[0].plot(error.rmse, error.modelo, "o", color='black')
 axes[0].tick_params(axis='y', which='major', labelsize=12)
 axes[0].set_title('RMSE')
-    
+
+for i, val in enumerate(error.rmse):
+    axes[0].text(0, i+0.1, "%.4f" % val)
+
+
 axes[1].hlines(error.modelo, xmin=0, xmax=error.r2)
 axes[1].plot(error.r2, error.modelo, "o", color='black')
 axes[1].tick_params(axis='y', which='major', labelsize=12)
 axes[1].set_title('R2')
+
+for i, val in enumerate(error.r2):
+    axes[1].text(0, i+0.1, "%.4f" % val)
 
 fig.tight_layout()
 
@@ -1165,3 +1197,9 @@ fig.tight_layout()
 # * Fitting empirical distribution to theoretical ones with Scipy (Python)?: https://stackoverflow.com/questions/6620471/fitting-empirical-distribution-to-theoretical-ones-with-scipy-python?lq=1
 # 
 # * Creación de modelos de Machine Learning: https://docs.microsoft.com/es-es/learn/paths/create-machine-learn-models/
+
+# In[ ]:
+
+
+
+
